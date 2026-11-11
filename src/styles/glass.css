@@ -742,3 +742,10 @@ html[data-perf='low'] .login .pill-field > svg:first-child, html[data-perf='low'
   .nav__label { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .nav__badge { left: calc(50% + 4px); }
 }
+
+/* ---------- tab bar on phones: nothing that has to be re-blurred while the page behind it changes ---------- */
+/* A blurred glass bar must recompute its blur every time the page behind it repaints, and that is exactly when a tab is tapped (the new page is drawn). On a phone that made the drop stutter. The bar is nearly solid already, so it is now simply solid. */
+@media (max-width: 1024px) {
+  .side, html[data-perf='mid'] .side { -webkit-backdrop-filter: none; backdrop-filter: none; background: linear-gradient(180deg, rgba(20, 82, 75, 0.97), rgba(8, 37, 35, 0.98)); }
+  .nav__liquid { will-change: left, right; }
+}
