@@ -57,9 +57,17 @@ export default function LiquidNav({ items, dueCount }: { items: NavItem[]; dueCo
     place(true)
     const nav = navRef.current
     if (!nav) return
-    const watch = new ResizeObserver(() => place(false))
+    /* the drop is placed in pixels, so it is placed again whenever the bar or any tab changes size: a scrollbar appearing, the phone turning, the fonts arriving */
+    const again = () => place(false)
+    const watch = new ResizeObserver(again)
     watch.observe(nav)
-    return () => watch.disconnect()
+    nav.querySelectorAll('a').forEach((a) => watch.observe(a))
+    window.addEventListener('resize', again)
+    void document.fonts?.ready.then(again)
+    return () => {
+      watch.disconnect()
+      window.removeEventListener('resize', again)
+    }
   }, [pathname])
 
   return (

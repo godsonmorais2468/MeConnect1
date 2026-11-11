@@ -10,6 +10,7 @@ import { installSpotlight } from './lib/spotlight'
 import { initPerf } from './lib/perf'
 import App from './App.tsx'
 import Splash from './components/Splash'
+import { reloadForNewVersion } from './lib/staleBuild'
 
 /* Installable app: the service worker is registered on the live site only, so development is never served from a cache. */
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
@@ -19,6 +20,12 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     })
   })
 }
+
+/* A page file that has gone missing (a new version went live while this tab was open): load the new version once instead of leaving a blank page. */
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault()
+  reloadForNewVersion()
+})
 
 initPerf()
 installSpotlight()

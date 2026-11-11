@@ -729,3 +729,16 @@ html[data-perf='low'] .login__card { box-shadow: 0 10px 24px -14px rgba(8, 50, 4
 html[data-perf='low'] .login__submit { box-shadow: 0 6px 12px -6px rgba(13, 110, 97, 0.7); }
 html[data-perf='low'] .login .pill-field > svg:first-child, html[data-perf='low'] .login .captcha__new { box-shadow: none; }
 @media (prefers-reduced-motion: reduce) { .login__submit::after { animation: none; display: none; } }
+
+/* the page that has just been swapped in fades in (opacity only, so it costs nothing); no fade-out and no waiting, so the screen never goes blank between pages */
+.route-in { animation: routeIn 0.16s ease-out backwards; }
+@keyframes routeIn { from { opacity: 0; } }
+
+/* ---------- tab bar on phones: every tab fits, nothing scrolls ---------- */
+/* Six tabs of at least 62px did not fit a 360px phone, so the bar slid sideways: the first tab was cut off, and the glass drop (placed from the bar's unscrolled edge) sat in the wrong spot. Now the tabs share the width equally and the bar cannot move. */
+@media (max-width: 1024px) {
+  .nav { overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
+  .nav a { flex: 1 1 0; min-width: 0; padding: 6px 1px; font-size: clamp(8.8px, 2.7vw, 10.5px); letter-spacing: -0.01em; }
+  .nav__label { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .nav__badge { left: calc(50% + 4px); }
+}

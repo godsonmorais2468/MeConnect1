@@ -1,6 +1,5 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom'
-import { AnimatePresence, m } from 'motion/react'
 import { ArrowLeftRight, Headset, KeyRound, LogOut, UserRound } from 'lucide-react'
 import { HOME, NAV } from '../data/nav'
 import { useAuth } from '../lib/auth'
@@ -16,6 +15,7 @@ import ChangeMpinDialog from './ChangeMpinDialog'
 import LiquidNav from './LiquidNav'
 import NotificationBell from './NotificationBell'
 import PushPermissionBanner from './PushPermissionBanner'
+import RouteErrorBoundary from './RouteErrorBoundary'
 import SwitchChapterDialog from './SwitchChapterDialog'
 import { Avatar, BrandMark, Glyph } from './ui'
 
@@ -77,7 +77,8 @@ export default function Shell() {
     }
   }, [role])
 
-  useEffect(() => {
+  /* A new page starts at the top. This runs in the same step that swaps the page in, before the screen is painted, so the old page never jumps up on its own and the new one never shows at the old scroll position. */
+  useLayoutEffect(() => {
     window.scrollTo(0, 0)
   }, [location.pathname])
 
@@ -221,11 +222,16 @@ export default function Shell() {
 
         <PushPermissionBanner />
 
-        <AnimatePresence mode="wait" initial={false}>
-          <m.main key={location.pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.14 }}>
-            <Suspense fallback={<div className="page" />}>{outlet}</Suspense>
-          </m.main>
-        </AnimatePresence>
+        {/* The page area stays in place; only the page inside it changes. The Suspense boundary stays mounted too, so while the next page's code is still downloading (slow phone, slow host) the current page stays on screen instead of going blank. */}
+        <main>
+          <RouteErrorBoundary resetKey={location.pathname}>
+            <Suspense fallback={<div className="page" />}>
+              <div key={location.pathname} className="route-in">
+                {outlet}
+              </div>
+            </Suspense>
+          </RouteErrorBoundary>
+        </main>
       </div>
     </div>
   )
