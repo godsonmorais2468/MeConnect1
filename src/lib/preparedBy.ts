@@ -14,7 +14,5 @@ export function preparedByLines(chapterId: string): string[] {
   const session = getSession()
   let name = ''
   if (session?.role === 'member') name = db.members.find((m) => m.id === session.id)?.name ?? ''
-  else if (session?.role === 'region_admin') name = db.regions.find((r) => r.id === session.id)?.adminName ?? ''
-  else if (session?.role === 'super_admin') name = 'Super Admin'
   return [name ? `Prepared by : ${name}` : 'Prepared by :']
 }

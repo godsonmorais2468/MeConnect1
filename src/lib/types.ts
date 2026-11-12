@@ -1,7 +1,7 @@
 /** Glossy tile colour families, defined as `.t-<tone>` in index.css. */
 export type Tone = 'red' | 'gold' | 'navy' | 'green' | 'steel' | 'wine'
 
-export type Role = 'super_admin' | 'region_admin' | 'member'
+export type Role = 'member'
 export type Mode = 'monthly' | 'tenure'
 export type Married = 'yes' | 'no' | ''
 export type ProfileState = 'pending' | 'saved' | 'skipped'

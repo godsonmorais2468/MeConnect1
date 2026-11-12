@@ -5,7 +5,6 @@
    ============================================================ */
 import { useSyncExternalStore } from 'react'
 import { receiptFloor, yearFor } from './vouchers'
-import { designationsOf } from './designations'
 import { SUPER_ADMIN, buildSeed } from '../data/seed'
 import { codeValid, distanceM, phaseOf, windowOf } from './attendance'
 import { dayOf, remainingOnRequest } from './dues'
@@ -13,7 +12,7 @@ import { fmtTime } from './format'
 import { apiRequest, setTokens, clearTokens } from './api'
 import { unlinkUser } from './oneSignal'
 import { BILLING_CYCLES, PLAN_SCOPES } from './types'
-import type { AccountHead, AppUsageChapter, AppUsageData, AttendanceMethod, BankMaster, Chapter, DB, Designation, DueListData, DueListMode, FinancialYear, HeadType, Invoice, Meeting, ModeOfPay, PayMethod, PaymentRequest, Plan, Poll, Profile, Recurrence, Membership, Region, Session, Substitute, Visitor, Vote, Voucher, VoucherKind } from './types'
+import type { AccountHead, AppUsageData, AttendanceMethod, BankMaster, DB, DueListData, DueListMode, FinancialYear, HeadType, Invoice, Meeting, ModeOfPay, PayMethod, PaymentRequest, Plan, Poll, Profile, Recurrence, Membership, Session, Substitute, Visitor, Vote, Voucher, VoucherKind } from './types'
 
 const DB_KEY = 'me-connect:db:v17'
 const SESSION_KEY = 'me-connect:session'
@@ -550,9 +549,7 @@ export async function signIn(mobile: string, pin: string, remember: boolean): Pr
     if (res.data?.user && res.data?.tokens) {
       const u = res.data.user
       let sessionId = u.id
-      if (u.role === 'region_admin' && (u as any).region_id) {
-        sessionId = (u as any).region_id
-      } else if (u.role === 'member' && (u as any).member_id) {
+      if (u.role === 'member' && (u as any).member_id) {
         sessionId = (u as any).member_id
       }
 
@@ -586,20 +583,8 @@ export async function signIn(mobile: string, pin: string, remember: boolean): Pr
 
   // Fallback to local session (e.g. offline dev fallback)
   let found: Session | null = null
-  if (mobile === SUPER_ADMIN.mobile && pin === SUPER_ADMIN.pin) {
-    found = { role: 'super_admin', id: SUPER_ADMIN.id }
-  } else {
-    const region = db.regions.find((r) => r.adminMobile === mobile && r.adminPin === pin)
-    if (region) {
-      if (region.isActive === false) {
-        return { error: `Region '${region.name}' is currently inactive. Contact Super Admin.` }
-      }
-      found = { role: 'region_admin', id: region.id }
-    } else {
-      const member = db.members.find((m) => m.mobile === mobile && m.pin === pin)
-      if (member) found = { role: 'member', id: member.id }
-    }
-  }
+  const member = db.members.find((m) => m.mobile === mobile && m.pin === pin)
+  if (member) found = { role: 'member', id: member.id }
   if (!found) {
     return { error: 'Invalid mobile number or PIN.' }
   }
@@ -660,204 +645,10 @@ export function resetDemo() {
 
 /* ---------- super admin ---------- */
 
-export async function createRegion(input: {
-  code: string
-  name: string
-  adminName: string
-  adminMobile: string
-  email: string
-  adminPin: string
-  subscriptionStartDate?: string
-  subscriptionEndDate?: string
-  subscriptionGrandfathered?: boolean
-  maxChapters?: number
-  isActive?: boolean
-}): Promise<ActionResult> {
-  const name = input.name.trim()
-  const code = input.code.trim().toUpperCase()
-  if (db.regions.some((r) => r.code && r.code.toUpperCase() === code)) return { field: 'code', error: 'A region with this code already exists.' }
-  if (db.regions.some((r) => r.name.toLowerCase() === name.toLowerCase())) return { field: 'name', error: 'A region with this name already exists.' }
-  if (mobileTaken(input.adminMobile)) return { field: 'adminMobile', error: 'This mobile number is already registered.' }
-
-  const payload: any = {
-    code,
-    name,
-    admin_name: input.adminName.trim(),
-    admin_mobile: input.adminMobile,
-    email: input.email.trim(),
-    admin_pin: input.adminPin,
-    subscription_start_date: input.subscriptionStartDate || null,
-    subscription_end_date: input.subscriptionEndDate || null,
-    subscription_grandfathered: input.subscriptionGrandfathered === true,
-    max_chapters: input.maxChapters != null ? input.maxChapters : 0,
-    is_active: input.isActive !== undefined ? input.isActive : true,
-  }
-
-  const res = await apiRequest<any>('/regions/', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
-
-  if (res.error) {
-    return { error: res.error }
-  }
-
-  const region: Region = {
-    id: res.data?.id || uid('rg'),
-    code,
-    name,
-    adminName: input.adminName.trim(),
-    adminMobile: input.adminMobile,
-    email: input.email.trim(),
-    adminPin: input.adminPin,
-    subscriptionStartDate: input.subscriptionStartDate || '',
-    subscriptionEndDate: input.subscriptionEndDate || '',
-    subscriptionGrandfathered: input.subscriptionGrandfathered === true,
-    maxChapters: input.maxChapters != null ? input.maxChapters : 0,
-    isActive: input.isActive !== undefined ? input.isActive : true,
-    createdAt: res.data?.created_at || iso(),
-  }
-  commit({ ...db, regions: [...db.regions, region] })
-  return { id: region.id }
-}
-
-export async function updateRegion(
-  id: string,
-  input: {
-    code?: string
-    name: string
-    adminName: string
-    adminMobile: string
-    email?: string
-    adminPin?: string
-    subscriptionStartDate?: string
-    subscriptionEndDate?: string
-    subscriptionGrandfathered?: boolean
-    maxChapters?: number
-    isActive?: boolean
-  },
-): Promise<ActionResult> {
-  const name = input.name.trim()
-  const code = (input.code ?? '').trim().toUpperCase()
-  if (code && db.regions.some((r) => r.id !== id && r.code && r.code.toUpperCase() === code)) {
-    return { field: 'code', error: 'A region with this code already exists.' }
-  }
-  if (db.regions.some((r) => r.id !== id && r.name.toLowerCase() === name.toLowerCase())) {
-    return { field: 'name', error: 'A region with this name already exists.' }
-  }
-
-  const payload: any = {
-    name,
-    admin_name: input.adminName.trim(),
-    admin_mobile: input.adminMobile,
-    subscription_start_date: input.subscriptionStartDate || null,
-    subscription_end_date: input.subscriptionEndDate || null,
-    subscription_grandfathered: input.subscriptionGrandfathered === true,
-    max_chapters: input.maxChapters != null ? input.maxChapters : 0,
-    is_active: input.isActive !== undefined ? input.isActive : true,
-  }
-  if (code) payload.code = code
-  if (input.email) payload.email = input.email.trim()
-  if (input.adminPin) {
-    payload.admin_pin = input.adminPin
-  }
-
-  const res = await apiRequest<any>(`/regions/${id}/`, {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-  })
-
-  if (res.error) {
-    return { error: res.error }
-  }
-
-  commit({
-    ...db,
-    regions: db.regions.map((r) =>
-      r.id === id
-        ? {
-            ...r,
-            name,
-            code: code || r.code,
-            email: input.email ? input.email.trim() : r.email,
-            adminName: input.adminName.trim(),
-            adminMobile: input.adminMobile,
-            adminPin: input.adminPin || r.adminPin,
-            subscriptionStartDate: input.subscriptionStartDate !== undefined ? input.subscriptionStartDate : r.subscriptionStartDate,
-            subscriptionEndDate: input.subscriptionEndDate !== undefined ? input.subscriptionEndDate : r.subscriptionEndDate,
-            subscriptionGrandfathered: input.subscriptionGrandfathered !== undefined ? input.subscriptionGrandfathered : r.subscriptionGrandfathered,
-            maxChapters: input.maxChapters !== undefined ? input.maxChapters : r.maxChapters,
-            isActive: input.isActive !== undefined ? input.isActive : r.isActive,
-          }
-        : r,
-    ),
-  })
-  return { id }
-}
-
-export async function deleteRegion(id: string): Promise<ActionResult> {
-  const res = await apiRequest(`/regions/${id}/`, { method: 'DELETE' })
-  if (res.error) return { error: res.error }
-
-  commit({
-    ...db,
-    regions: db.regions.filter((r) => r.id !== id),
-    chapters: db.chapters.filter((c) => c.regionId !== id),
-  })
-  return { id }
-}
-
 export interface CreatePlanInput extends Omit<Plan, 'id'> {
   assignAllRegions?: boolean
   assignRegionIds?: string[]
   idempotencyKey?: string
-}
-
-export async function createPlan(input: CreatePlanInput): Promise<ActionResult> {
-  const name = input.name.trim()
-  const { assignAllRegions, assignRegionIds, idempotencyKey, ...planInput } = input
-  if (db.plans.some((p) => p.name.toLowerCase() === name.toLowerCase())) return { field: 'name', error: 'A plan with this name already exists.' }
-
-  const regionAssignment =
-    planInput.scopeType === 'region'
-      ? {
-          assign_all_regions: Boolean(assignAllRegions),
-          assign_regions: assignRegionIds ?? [],
-        }
-      : {}
-
-  const res = await apiRequest<any>('/masters/plans/', {
-    method: 'POST',
-    body: JSON.stringify({
-      name,
-      description: planInput.description.trim(),
-      scope_type: planInput.scopeType,
-      billing_cycle: planInput.billingCycle,
-      rate: planInput.rate,
-      tax_percent: planInput.taxPercent,
-      region: planInput.regionId || null,
-      chapter: planInput.scopeType === 'region' ? null : planInput.chapterId || null,
-      member: planInput.scopeType === 'member' ? planInput.memberId || null : null,
-      ...regionAssignment,
-      ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
-    }),
-  })
-
-  if (res.error) {
-    return { error: res.error }
-  }
-
-  const plan: Plan = {
-    ...planInput,
-    name,
-    description: planInput.description.trim(),
-    id: res.data?.id || uid('pl'),
-    canDelete: true,
-    applicableRegions: res.data?.applicable_regions || (planInput.scopeType === 'region' ? (assignAllRegions ? db.regions.map(r => r.id) : (assignRegionIds ?? [])) : []),
-    applicableRegionNames: res.data?.applicable_region_names || [],
-  }
-  commit({ ...db, plans: [...db.plans, plan] })
-  return { id: plan.id }
 }
 
 export interface UpdatePlanAssignment {
@@ -865,163 +656,7 @@ export interface UpdatePlanAssignment {
   assignRegionIds?: string[]
 }
 
-export async function updatePlan(
-  id: string,
-  input: Omit<Plan, 'id'>,
-  regionAssignment?: UpdatePlanAssignment
-): Promise<ActionResult> {
-  const name = input.name.trim()
-  if (db.plans.some((p) => p.id !== id && p.name.toLowerCase() === name.toLowerCase())) return { field: 'name', error: 'A plan with this name already exists.' }
-
-  const assignAll = regionAssignment?.assignAllRegions
-  const assignIds = regionAssignment?.assignRegionIds
-  const assignmentPayload =
-    input.scopeType === 'region' && (assignAll !== undefined || assignIds !== undefined)
-      ? {
-          assign_all_regions: Boolean(assignAll),
-          assign_regions: assignIds ?? [],
-        }
-      : {}
-
-  const res = await apiRequest<any>(`/masters/plans/${id}/`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      name,
-      description: input.description.trim(),
-      scope_type: input.scopeType,
-      billing_cycle: input.billingCycle,
-      rate: input.rate,
-      tax_percent: input.taxPercent,
-      region: input.regionId || null,
-      chapter: input.scopeType === 'region' ? null : input.chapterId || null,
-      member: input.scopeType === 'member' ? input.memberId || null : null,
-      ...assignmentPayload,
-    }),
-  })
-
-  if (res.error) {
-    return { error: res.error }
-  }
-
-  const updatedPlan: Plan = {
-    ...input,
-    id,
-    name,
-    description: input.description.trim(),
-    applicableRegions: res.data?.applicable_regions || (input.scopeType === 'region' ? (assignAll ? db.regions.map(r => r.id) : (assignIds ?? input.applicableRegions ?? [])) : []),
-    applicableRegionNames: res.data?.applicable_region_names || input.applicableRegionNames || [],
-  }
-
-  commit({ ...db, plans: db.plans.map((p) => (p.id === id ? { ...p, ...updatedPlan } : p)) })
-  return { id }
-}
-
-export async function deletePlan(id: string): Promise<ActionResult> {
-  const target = db.plans.find((p) => p.id === id)
-  if (target && target.canDelete === false) {
-    return { error: `Cannot delete plan '${target.name}' because an active subscription or verified payment exists.` }
-  }
-
-  const res = await apiRequest(`/masters/plans/${id}/`, { method: 'DELETE' })
-  if (res.error) return { error: res.error }
-
-  commit({ ...db, plans: db.plans.filter((p) => p.id !== id) })
-  return { id }
-}
-
 /* ---------- region admin ---------- */
-
-export async function createChapter(
-  regionId: string,
-  input: { code: string; name: string; logo?: string; logoName?: string; description?: string; isActive?: boolean },
-): Promise<ActionResult> {
-  const name = input.name.trim()
-  const code = input.code.trim().toUpperCase()
-  const targetRegion = db.regions.find((r) => r.id === regionId)
-  if (targetRegion?.maxChapters && targetRegion.maxChapters > 0) {
-    const count = db.chapters.filter((c) => c.regionId === regionId).length
-    if (count >= targetRegion.maxChapters) {
-      return { error: `Chapter limit reached for this region (maximum ${targetRegion.maxChapters} chapters allowed).` }
-    }
-  }
-
-  if (db.chapters.some((c) => c.regionId === regionId && c.code && c.code.toUpperCase() === code)) {
-    return { field: 'code', error: 'This region already has a chapter with this code.' }
-  }
-  if (db.chapters.some((c) => c.regionId === regionId && c.name.toLowerCase() === name.toLowerCase())) {
-    return { field: 'name', error: 'This region already has a chapter with this name.' }
-  }
-
-  const res = await apiRequest<any>('/chapters/', {
-    method: 'POST',
-    body: JSON.stringify({
-      region: regionId,
-      code,
-      name,
-      logo: input.logo || '',
-      logo_name: input.logo ? input.logoName || '' : '',
-      description: (input.description || '').trim(),
-      is_active: input.isActive !== undefined ? input.isActive : true,
-    }),
-  })
-
-  if (res.error) return { error: res.error }
-
-  const chapter: Chapter = {
-    id: res.data?.id || uid('ch'),
-    regionId,
-    code,
-    name,
-    city: '',
-    logo: input.logo || '',
-    logoName: input.logo ? input.logoName || '' : '',
-    description: (input.description || '').trim(),
-    isActive: input.isActive !== undefined ? input.isActive : true,
-    createdAt: res.data?.created_at || iso(),
-  }
-  commit({ ...db, chapters: [...db.chapters, chapter] })
-  return { id: chapter.id }
-}
-
-/** Changes a chapter's code, name, logo, description or active state. */
-export async function updateChapter(
-  id: string,
-  input: { code: string; name: string; logo?: string; logoName?: string; description?: string; isActive?: boolean },
-): Promise<ActionResult> {
-  const current = db.chapters.find((c) => c.id === id)
-  if (!current) return { error: 'Chapter not found.' }
-  const name = input.name.trim()
-  const code = input.code.trim().toUpperCase()
-  if (db.chapters.some((c) => c.id !== id && c.regionId === current.regionId && c.code && c.code.toUpperCase() === code)) {
-    return { field: 'code', error: 'This region already has a chapter with this code.' }
-  }
-  if (db.chapters.some((c) => c.id !== id && c.regionId === current.regionId && c.name.toLowerCase() === name.toLowerCase())) {
-    return { field: 'name', error: 'This region already has a chapter with this name.' }
-  }
-
-  const res = await apiRequest<any>(`/chapters/${id}/`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      code,
-      name,
-      logo: input.logo || '',
-      logo_name: input.logo ? input.logoName || '' : '',
-      description: (input.description || '').trim(),
-      is_active: input.isActive !== undefined ? input.isActive : true,
-    }),
-  })
-  if (res.error) return { error: res.error }
-
-  commit({
-    ...db,
-    chapters: db.chapters.map((c) =>
-      c.id === id
-        ? { ...c, code, name, logo: input.logo || '', logoName: input.logo ? input.logoName || '' : '', description: (input.description || '').trim(), isActive: input.isActive !== undefined ? input.isActive : true }
-        : c,
-    ),
-  })
-  return { id }
-}
 
 /* ---------- chapter team ---------- */
 
@@ -1163,160 +798,6 @@ export interface DesignationInput {
   multiChapterAddOnly?: boolean
   permissions?: string[]
   isActive?: boolean
-}
-
-function designationPayload(input: DesignationInput) {
-  return {
-    name: input.name.trim(),
-    description: (input.description || '').trim(),
-    is_head_table: Boolean(input.isHeadTable),
-    is_leadership_team: Boolean(input.isLeadershipTeam),
-    multi_chapter_login: Boolean(input.multiChapterLogin),
-    multi_chapter_add_only: Boolean(input.multiChapterAddOnly),
-    permissions: Array.isArray(input.permissions) ? input.permissions : [],
-    is_active: input.isActive !== undefined ? input.isActive : true,
-  }
-}
-
-/** Why a designation name cannot be used in a region (or among the defaults when `regionId` is empty), or null. */
-function designationClash(regionId: string, name: string, ignoreId = '', sourceId = '', chapterId = ''): string | null {
-  if (chapterId) {
-    /* a chapter cannot repeat a designation it already has from its region or the defaults, or one of its own */
-    const have = designationsOf(db, regionId, chapterId).some((d) => d.id !== ignoreId && d.name.toLowerCase() === name.toLowerCase())
-    return have ? 'This designation is already available to your chapter.' : null
-  }
-  const same = db.designations.filter((d) => d.id !== ignoreId && !d.chapterId && d.name.toLowerCase() === name.toLowerCase())
-  if (same.some((d) => d.regionId === regionId && !d.hidden)) return regionId ? 'This region already has a designation with this name.' : 'A default designation with this name already exists.'
-  if (regionId) {
-    /* a default the region has changed or removed no longer counts */
-    const replaced = new Set(db.designations.filter((d) => d.regionId === regionId && d.sourceId).map((d) => d.sourceId))
-    if (same.some((d) => !d.regionId && d.id !== sourceId && !replaced.has(d.id))) return 'This is already a default designation for every region.'
-  }
-  return null
-}
-
-export async function createDesignation(regionId: string, input: DesignationInput, chapterId = ''): Promise<ActionResult> {
-  const name = input.name.trim()
-  /* An empty region id is a default for every region (super admin only); a chapter id makes it that chapter's own. */
-  const clash = designationClash(regionId, name, '', '', chapterId)
-  if (clash) return { field: 'name', error: clash }
-  const res = await apiRequest<any>('/masters/designations/', {
-    method: 'POST',
-    body: JSON.stringify({ region: regionId || null, chapter: chapterId || null, ...designationPayload(input) }),
-  })
-  if (res.error) return { error: res.error }
-  const d: Designation = {
-    id: res.data?.id || uid('ds'),
-    regionId,
-    chapterId,
-    name,
-    description: (input.description || '').trim(),
-    isHeadTable: Boolean(input.isHeadTable),
-    isLeadershipTeam: Boolean(input.isLeadershipTeam),
-    multiChapterLogin: Boolean(input.multiChapterLogin),
-    multiChapterAddOnly: Boolean(input.multiChapterAddOnly),
-    permissions: Array.isArray(input.permissions) ? input.permissions : [],
-    isActive: input.isActive !== undefined ? input.isActive : true,
-    createdAt: res.data?.created_at || iso(),
-  }
-  commit({ ...db, designations: [...db.designations, d] })
-  return { id: d.id }
-}
-
-/**
- * A region admin changes a default for their own region. This saves the region's own version, which replaces the
- * default in that region only; the default itself and other regions are untouched.
- */
-export async function customiseDesignation(defaultId: string, regionId: string, input: DesignationInput, chapterId = ''): Promise<ActionResult> {
-  const base = db.designations.find((d) => d.id === defaultId && !d.chapterId)
-  if (!base) return { error: 'Designation not found.' }
-  const name = input.name.trim()
-  /* with a chapter id this is that chapter's own version of a designation it gets from its region or the defaults */
-  const clash = chapterId ? designationClash(regionId, name, defaultId, defaultId, chapterId) : designationClash(regionId, name, '', defaultId)
-  if (clash) return { field: 'name', error: clash }
-  const res = await apiRequest<any>('/masters/designations/', {
-    method: 'POST',
-    body: JSON.stringify({ region: regionId, chapter: chapterId || null, source: defaultId, ...designationPayload(input) }),
-  })
-  if (res.error) return { error: res.error }
-  const d: Designation = {
-    id: res.data?.id || uid('ds'),
-    regionId,
-    chapterId,
-    sourceId: defaultId,
-    hidden: false,
-    name,
-    description: (input.description || '').trim(),
-    isHeadTable: Boolean(input.isHeadTable),
-    isLeadershipTeam: Boolean(input.isLeadershipTeam),
-    multiChapterLogin: Boolean(input.multiChapterLogin),
-    multiChapterAddOnly: Boolean(input.multiChapterAddOnly),
-    permissions: Array.isArray(input.permissions) ? input.permissions : [],
-    isActive: input.isActive !== undefined ? input.isActive : true,
-    createdAt: res.data?.created_at || iso(),
-  }
-  commit({ ...db, designations: [...db.designations, d] })
-  return { id: d.id }
-}
-
-/**
- * A region admin removes a default (or their own version of one) from their region only.
- * It is hidden there, not deleted, so other regions keep it and the default does not come back.
- */
-export async function removeDesignationForRegion(id: string, regionId: string, chapterId = ''): Promise<ActionResult> {
-  const current = db.designations.find((d) => d.id === id)
-  if (!current) return { error: 'Designation not found.' }
-  /* already this region's (or this chapter's) own row: hide it; otherwise save a hidden version of what it inherits */
-  if (chapterId ? current.chapterId === chapterId : Boolean(current.regionId)) {
-    const res = await apiRequest<any>(`/masters/designations/${id}/`, { method: 'PATCH', body: JSON.stringify({ is_hidden: true }) })
-    if (res.error) return { error: res.error }
-    commit({ ...db, designations: db.designations.map((d) => (d.id === id ? { ...d, hidden: true } : d)) })
-    return { id }
-  }
-  const res = await apiRequest<any>('/masters/designations/', {
-    method: 'POST',
-    body: JSON.stringify({ region: regionId, chapter: chapterId || null, source: id, ...designationPayload(current), is_hidden: true }),
-  })
-  if (res.error) return { error: res.error }
-  const hidden: Designation = { ...current, id: res.data?.id || uid('ds'), regionId, chapterId, sourceId: id, hidden: true }
-  commit({ ...db, designations: [...db.designations, hidden] })
-  return { id }
-}
-
-export async function updateDesignation(id: string, input: DesignationInput): Promise<ActionResult> {
-  const current = db.designations.find((d) => d.id === id)
-  if (!current) return { error: 'Designation not found.' }
-  const name = input.name.trim()
-  const clash = designationClash(current.regionId, name, id, '', current.chapterId ?? '')
-  if (clash) return { field: 'name', error: clash }
-  const res = await apiRequest<any>(`/masters/designations/${id}/`, { method: 'PATCH', body: JSON.stringify(designationPayload(input)) })
-  if (res.error) return { error: res.error }
-  commit({
-    ...db,
-    designations: db.designations.map((d) =>
-      d.id === id
-        ? {
-            ...d,
-            name,
-            description: (input.description || '').trim(),
-            isHeadTable: Boolean(input.isHeadTable),
-            isLeadershipTeam: Boolean(input.isLeadershipTeam),
-            multiChapterLogin: Boolean(input.multiChapterLogin),
-            multiChapterAddOnly: Boolean(input.multiChapterAddOnly),
-            permissions: Array.isArray(input.permissions) ? input.permissions : [],
-            isActive: input.isActive !== undefined ? input.isActive : true,
-          }
-        : d,
-    ),
-  })
-  return { id }
-}
-
-export async function deleteDesignation(id: string): Promise<ActionResult> {
-  const res = await apiRequest<any>(`/masters/designations/${id}/`, { method: 'DELETE' })
-  if (res.error) return { error: res.error }
-  commit({ ...db, designations: db.designations.filter((d) => d.id !== id) })
-  return { id }
 }
 
 /* ---------- account heads (income / expense) ---------- */
@@ -1879,27 +1360,6 @@ export async function fetchAppUsage(chapterId?: string): Promise<AppUsageData | 
   }
 }
 
-/** The Super Admin's App Usage summary: every chapter with how many members have signed up, completed a profile and used each activity. Null when it cannot be read. */
-export async function fetchAppUsageSummary(): Promise<AppUsageChapter[] | null> {
-  const res = await apiRequest<any>('/members/app-usage/summary/')
-  if (res.error || !res.data) return null
-  return (res.data.chapters || []).map((c: any) => ({
-    chapter: String(c.chapter),
-    name: c.name,
-    code: c.code || '',
-    isActive: c.is_active !== false,
-    region: String(c.region),
-    regionName: c.region_name,
-    regionCode: c.region_code || '',
-    members: Number(c.members) || 0,
-    signedUp: Number(c.signed_up) || 0,
-    profileComplete: Number(c.profile_complete) || 0,
-    attended: Number(c.attended) || 0,
-    voted: Number(c.voted) || 0,
-    paid: Number(c.paid) || 0,
-  }))
-}
-
 /** Settings > Due List: turns it on or off and sets the way of listing. Saved on the server, so every member's device follows it. */
 export async function setDueList(chapterId: string, enabled: boolean, mode: DueListMode): Promise<ActionResult> {
   const res = await apiRequest<any>(`/chapters/${chapterId}/settings/`, {
@@ -1909,24 +1369,6 @@ export async function setDueList(chapterId: string, enabled: boolean, mode: DueL
   if (res.error) return { error: res.error }
   commit({ ...db, chapters: db.chapters.map((c) => (c.id === chapterId ? { ...c, dueListEnabled: enabled, dueListMode: mode } : c)) })
   return { id: chapterId }
-}
-
-export async function deleteChapter(id: string): Promise<ActionResult> {
-  const target = db.chapters.find((c) => c.id === id)
-  const membersCount = db.members.filter((m) => m.chapterId === id).length
-  if (membersCount > 0) {
-    return { error: `Cannot delete chapter '${target?.name || ''}' because it has ${membersCount} member(s) connected.` }
-  }
-
-  const res = await apiRequest(`/chapters/${id}/`, { method: 'DELETE' })
-  if (res.error) return { error: res.error }
-
-  commit({
-    ...db,
-    chapters: db.chapters.filter((c) => c.id !== id),
-    meetings: db.meetings.filter((m) => m.chapterId !== id),
-  })
-  return { id }
 }
 
 /* ---------- profile ---------- */

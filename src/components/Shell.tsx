@@ -48,7 +48,7 @@ export default function Shell() {
   useEffect(() => {
     if (!role) return
     const load = () => {
-      if (role === 'member') {
+      {
         void import('../pages/member/Directory')
         void import('../pages/member/DueList')
         void import('../pages/member/Attendance')
@@ -61,14 +61,6 @@ export default function Shell() {
         void import('../pages/member/ManagePayments')
         void import('../pages/member/Meetings')
         void import('../pages/member/ManageRsvp')
-      } else if (role === 'region_admin') {
-        void import('../pages/region/Chapters')
-        void import('../pages/region/Designations')
-        void import('../pages/region/ChapterTeam')
-      } else {
-        void import('../pages/admin/Regions')
-        void import('../pages/admin/Plans')
-        void import('../pages/admin/Subscriptions')
       }
     }
     const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback
@@ -93,7 +85,7 @@ export default function Shell() {
   const nav = NAV[auth.role].filter((item) => !item.headTable || isHeadTable(db, member))
   const pct = member ? percent(member) : 0
   const dueCount = member ? db.invoices.filter((i) => i.memberId === member.id && i.status === 'due').length : 0
-  const sub = auth.chapter ? `${auth.chapter.name} · ${auth.region?.name ?? ''}` : auth.role === 'super_admin' ? 'Super Admin' : (auth.region?.name ?? '')
+  const sub = auth.chapter ? `${auth.chapter.name} · ${auth.region?.name ?? ''}` : (auth.region?.name ?? '')
 
   return (
     <div className="app">
@@ -140,7 +132,7 @@ export default function Shell() {
                   </>
                 ) : (
                   <>
-                    <Glyph icon={UserRound} tone={auth.role === 'super_admin' ? 'wine' : 'gold'} size={36} />
+                    <Glyph icon={UserRound} tone="gold" size={36} />
                     <span className="me__text">
                       <span className="me__name">{auth.name}</span>
                       <span className="me__role">{auth.subtitle}</span>

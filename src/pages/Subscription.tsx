@@ -71,7 +71,8 @@ export default function Subscription() {
   const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const isRegionAdmin = auth.role === 'region_admin' || auth.role === 'super_admin'
+  /* there are no region or super admin sign-ins in this app, so the region-wide payment overview below never shows */
+  const isRegionAdmin = false as boolean
 
   const [status, setStatus] = useState<SubscriptionStatus | null>(null)
   const [payments, setPayments] = useState<SubscriptionPayment[]>([])

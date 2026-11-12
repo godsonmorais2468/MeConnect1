@@ -20,14 +20,6 @@ export function useAuth(): AuthInfo {
   const db = useDB()
   if (!session) return NONE
 
-  if (session.role === 'super_admin') {
-    return { ...NONE, role: 'super_admin', name: 'Super Admin', subtitle: 'Super Admin' }
-  }
-  if (session.role === 'region_admin') {
-    const region = db.regions.find((r) => r.id === session.id)
-    if (!region) return NONE
-    return { ...NONE, role: 'region_admin', name: region.adminName, subtitle: `Region Admin · ${region.name}`, region }
-  }
   const member = db.members.find((m) => m.id === session.id)
   if (!member) return NONE
   const chapter = db.chapters.find((c) => c.id === member.chapterId) ?? null

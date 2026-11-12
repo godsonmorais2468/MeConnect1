@@ -246,13 +246,8 @@ function membership(m: Row) {
   return { member_id: m.id, chapter_id: m.chapter, chapter_name: chapterById(m.chapter)?.name ?? '', region_name: regionById(m.region)?.name ?? '', designation: m.designation }
 }
 
-function login(as: string) {
+function login() {
   const tokens = { access: 'prototype', refresh: 'prototype' }
-  if (as === 'super_admin') return { user: { id: 'sa', name: 'Super Admin', mobile: '', role: 'super_admin' }, tokens, memberships: [] }
-  if (as === 'region_admin') {
-    const region = tables.regions[0]
-    return { user: { id: 'ra', name: region.admin_name, mobile: region.admin_mobile, role: 'region_admin', region_id: region.id }, tokens, memberships: [] }
-  }
   const m = memberById(ME) as Row
   return { user: { id: 'u3', name: m.name, mobile: m.mobile, role: 'member', member_id: m.id }, tokens, memberships: [membership(m)] }
 }
@@ -498,13 +493,13 @@ function collection(path: string, method: string, query: URLSearchParams, body: 
 function answer(path: string, method: string, query: URLSearchParams, body: Row): DemoAnswer<any> {
   switch (path) {
     case '/auth/login/':
-      return ok(login(String(body.mobile ?? '')))
+      return ok(login())
     case '/auth/memberships/': {
       const m = memberById(signedIn().id)
       return ok({ memberships: m ? [membership(m)] : [] })
     }
     case '/auth/switch-chapter/':
-      return ok(login('member'))
+      return ok(login())
     case '/auth/change-pin/':
     case '/auth/password-reset/confirm/':
       return ok({})

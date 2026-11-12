@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-On the sign-in screen, **Login Now** opens the app as a chapter member on the head table, with nothing typed in. **Region Admin** and **Super Admin** under it open those areas.
+On the sign-in screen, **Login Now** opens the app as a chapter member on the head table, with nothing typed in. There are no admin dashboards: the app is the member app only.
 
 All names, numbers and payments are made up.
 

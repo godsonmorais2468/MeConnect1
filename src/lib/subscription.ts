@@ -2,7 +2,6 @@ import { apiRequest } from './api'
 import type {
   PaginatedResponse,
   SubscriptionPayment,
-  SubscriptionRecord,
   SubscriptionStatus,
 } from './types'
 
@@ -29,34 +28,6 @@ export function fetchSubscriptionPayments(params?: PaymentFilterParams) {
   const qs = query.toString()
   const endpoint = qs ? `/subscriptions/payments/?${qs}` : '/subscriptions/payments/'
   return apiRequest<PaginatedResponse<SubscriptionPayment> | SubscriptionPayment[]>(endpoint)
-}
-
-export function fetchSubscriptions() {
-  return apiRequest<SubscriptionRecord[] | { results: SubscriptionRecord[] }>('/subscriptions/')
-}
-
-export function subscriptionList(
-  data: SubscriptionRecord[] | { results: SubscriptionRecord[] } | undefined,
-) {
-  if (Array.isArray(data)) return data
-  return data?.results ?? []
-}
-
-export function assignRegionSubscription(planId: string, regionId: string) {
-  return apiRequest<SubscriptionRecord>('/subscriptions/', {
-    method: 'POST',
-    body: JSON.stringify({ plan: planId, scope_type: 'region', region: regionId }),
-  })
-}
-
-export function activateSubscription(id: string, note = 'Manual payment verification') {
-  return apiRequest<{ subscription: SubscriptionRecord; created: boolean }>(
-    `/subscriptions/${id}/activate/`,
-    {
-      method: 'POST',
-      body: JSON.stringify({ note }),
-    },
-  )
 }
 
 export function paymentList(

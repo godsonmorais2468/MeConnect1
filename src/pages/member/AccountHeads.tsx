@@ -14,9 +14,7 @@ import type { AccountHead, HeadType } from '../../lib/types'
 import { showFormIfHidden } from '../../lib/scroll'
 
 export default function AccountHeads() {
-  const { member, chapter, role } = useAuth()
-  /* The super admin sets the defaults every chapter gets; a head table member sees them locked and adds their own on top. */
-  const isSuper = role === 'super_admin'
+  const { member, chapter } = useAuth()
   const chapterId = chapter?.id ?? ''
   const db = useDB()
   const [q, setQ] = useState('')
@@ -33,9 +31,9 @@ export default function AccountHeads() {
   const [isActive, setIsActive] = useState(true)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  if (!isSuper && (!member || !chapter)) return null
+  if (!member || !chapter) return null
 
-  const list = isSuper ? (db.accountHeads || []).filter((h) => !h.chapterId) : headsOf(db, chapterId)
+  const list = headsOf(db, chapterId)
   const incomes = list.filter((h) => h.headType === 'income')
   const expenses = list.filter((h) => h.headType === 'expense')
 
@@ -125,17 +123,15 @@ export default function AccountHeads() {
   return (
     <div className="page">
       <PageHead
-        eyebrow={isSuper ? 'Super Admin · Default for all chapters' : `${chapter?.name ?? ''} · ${member?.designation ?? ''}`}
+        eyebrow={`${chapter?.name ?? ''} · ${member?.designation ?? ''}`}
         icon={Layers}
         tone="steel"
         title="Income & Expense Heads"
-        subtitle={isSuper ? 'The income and expense heads every chapter gets, including chapters added later. Chapters can add their own on top.' : 'Manage master income and expense heads for chapter transactions and reports. Defaults from the super admin are locked.'}
+        subtitle="Manage master income and expense heads for chapter transactions and reports. Defaults from the super admin are locked."
         actions={
-          isSuper ? undefined : (
-            <Link className="btn btn--line btn--sm" to="/accounts">
-              <ArrowLeft size={16} /> Accounts
-            </Link>
-          )
+          <Link className="btn btn--line btn--sm" to="/accounts">
+            <ArrowLeft size={16} /> Accounts
+          </Link>
         }
       />
 
@@ -152,7 +148,7 @@ export default function AccountHeads() {
           icon={editing ? Pencil : Plus}
           tone={headType === 'income' ? 'green' : 'red'}
           title={editing ? 'Edit account head' : 'New account head'}
-          note={isSuper ? 'All chapters' : chapter?.name}
+          note={chapter?.name}
         >
           <form className="form-stack" onSubmit={submit} noValidate>
             <FieldGroup label="Head Type" required>
@@ -251,13 +247,13 @@ export default function AccountHeads() {
           {list.length === 0 ? (
             <div className="empty">
               <b>No account heads yet.</b>
-              {isSuper ? 'Use the form on the left to set up the heads every chapter gets.' : "Use the form on the left to set up your chapter's income and expense heads."}
+              Use the form on the left to set up your chapter's income and expense heads.
             </div>
           ) : (
             <>
               {paginated.map((h) => {
                 const isIncome = h.headType === 'income'
-                const locked = !isSuper && !h.chapterId
+                const locked = !h.chapterId
                 return (
                   <article key={h.id} className="row" style={{ opacity: h.isActive ? 1 : 0.7 }}>
                     <div className="row__acts">
