@@ -26,3 +26,11 @@ All names, numbers and payments are made up.
 - `src/components/AuthArt.tsx`: pine panel beside the sign-in form.
 - `src/pages/member/Home.tsx`: home layout.
 - `src/lib/demoApi.ts`: sample data and the answers to every request.
+
+## Colour themes
+
+The palette button in the top bar (and in the corner of the sign-in page) opens the theme panel: eleven themes and a colour picker for any colour. The choice is saved in the browser.
+
+- Every teal-family colour in the stylesheets is a numbered slot (`--c0-r`, `--c0-g`, `--c0-b`, ...), listed in `src/styles/theme-vars.css` and `src/lib/themeRoles.ts`. Both files are generated; to add a new colour to the family, put it in a stylesheet as a normal hex or `rgb()` value and re-run the theme tool (a one-off script), or edit the generated files together.
+- `src/lib/theme.ts` turns every slot to the chosen hue (each colour keeps its own lightness) and writes the numbers on `<html>`. The slots are registered CSS numbers (`@property`), so the browser eases them from one theme to the next. Devices on the `low` tier, and people who ask for reduced motion, switch instantly.
+- The gold accent, the status colours (red, green, amber) and the text colour do not change with the theme.

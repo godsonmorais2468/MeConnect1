@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { getTier } from '../lib/perf'
+import { tc } from '../lib/theme'
 
 /* How long the splash plays before it leaves, and how long the leaving takes (ms). */
 const HOLD = 3000
@@ -69,13 +70,13 @@ export default function Splash() {
         <svg className="splash__scene" viewBox="0 0 400 400">
           <defs>
             <linearGradient id="splash-core" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#1F6B60" />
-              <stop offset="1" stopColor="#0A2E2B" />
+              <stop offset="0" style={{ stopColor: tc("#1F6B60") }} />
+              <stop offset="1" style={{ stopColor: tc("#0A2E2B") }} />
             </linearGradient>
             <linearGradient id="splash-ring" x1="0" y1="0" x2="1" y2="1">
               <stop offset="0" stopColor="#F2B33D" stopOpacity="0.9" />
               <stop offset="0.5" stopColor="#FFFFFF" stopOpacity="0.35" />
-              <stop offset="1" stopColor="#2DD4BF" stopOpacity="0.8" />
+              <stop offset="1" style={{ stopColor: tc("#2DD4BF") }} stopOpacity="0.8" />
             </linearGradient>
           </defs>
 

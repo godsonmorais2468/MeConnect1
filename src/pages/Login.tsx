@@ -4,6 +4,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { ArrowRight, Loader2, Phone, RefreshCw, ShieldCheck } from 'lucide-react'
 import ChapterList from '../components/ChapterList'
 import AuthArt from '../components/AuthArt'
+import ThemePicker from '../components/ThemePicker'
 import { BrandMark, Toggle } from '../components/ui'
 import { HOME } from '../data/nav'
 import { useAuth } from '../lib/auth'
@@ -112,6 +113,7 @@ export default function Login() {
     <>
       <div className="login">
         <AuthArt />
+        <ThemePicker floating />
         <section className="login__card" ref={cardRef}>
           <div className="login__top">
             <BrandMark size={76} />

@@ -16,6 +16,7 @@ import LiquidNav from './LiquidNav'
 import NotificationBell from './NotificationBell'
 import PushPermissionBanner from './PushPermissionBanner'
 import RouteErrorBoundary from './RouteErrorBoundary'
+import ThemePicker from './ThemePicker'
 import SwitchChapterDialog from './SwitchChapterDialog'
 import { Avatar, BrandMark, Glyph } from './ui'
 
@@ -118,6 +119,7 @@ export default function Shell() {
           </NavLink>
 
           <div className="top__right">
+            <ThemePicker />
             {member && <NotificationBell notes={notes} memberId={member.id} />}
             <div className="me" ref={menuRef}>
               <button

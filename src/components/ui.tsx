@@ -4,6 +4,7 @@ import type { LucideProps } from 'lucide-react'
 import { Camera } from 'lucide-react'
 import { initials, toneFor } from '../lib/format'
 import { readPhoto } from '../lib/photo'
+import { tc } from '../lib/theme'
 import type { Tone } from '../lib/types'
 
 type IconType = ComponentType<LucideProps>
@@ -24,7 +25,7 @@ export function BrandMark({ size = 44 }: { size?: number }) {
   return (
     <span className="brand-mark" style={sizeVar(size)}>
       <svg viewBox="0 0 64 64" role="img" aria-label="ME-CONNECT">
-        <rect width="64" height="64" rx="16" fill="#17403C" />
+        <rect width="64" height="64" rx="16" style={{ fill: tc("#17403C") }} />
         <path d="M16 46V20l16 18 16-18v26" fill="none" stroke="#fff" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
         <circle cx="32" cy="38" r="6.5" fill="#F2B33D" />
       </svg>

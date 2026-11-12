@@ -4,7 +4,7 @@
    ============================================================ */
 
 /* ---------- icon tiles and avatars ---------- */
-.t-red { --t-bg: #DFF0EC; --t-fg: #0D6E61; }
+.t-red { --t-bg: rgb(var(--c43-r) var(--c43-g) var(--c43-b)); --t-fg: rgb(var(--c29-r) var(--c29-g) var(--c29-b)); }
 .t-gold { --t-bg: #FBEFD5; --t-fg: #8A5A00; }
 .t-navy { --t-bg: #E4E7F6; --t-fg: #34418F; }
 .t-green { --t-bg: #E1F2E7; --t-fg: #1B7A4F; }
@@ -112,12 +112,12 @@
 
 .field__control { height: 44px; padding: 0 14px; border-color: var(--line-mid); border-radius: var(--r-md); background: var(--card); box-shadow: none; }
 textarea.field__control { height: auto; padding: 11px 14px; }
-.field__control:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(13, 110, 97, 0.14); }
+.field__control:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--c29-r) var(--c29-g) var(--c29-b) / 0.14); }
 .field__control:disabled { background: var(--card-sunk); }
 .field__label { font-weight: 600; color: var(--ink-soft); }
 
 .pill-field { height: 48px; padding: 0 14px; border-radius: var(--r-md); border-color: var(--line-mid); background: var(--card); box-shadow: none; }
-.pill-field:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(13, 110, 97, 0.14); }
+.pill-field:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--c29-r) var(--c29-g) var(--c29-b) / 0.14); }
 
 .seg { padding: 3px; border-radius: var(--r-md); background: rgba(20, 32, 31, 0.06); border-color: transparent; }
 .seg button { height: 36px; border-radius: 8px; }
@@ -174,7 +174,7 @@ html:has(.login), body:has(.login) { overflow: hidden; }
 
 .pin { gap: 10px; }
 .pin input { height: 54px; border-radius: var(--r-md); border-color: var(--line-mid); background: var(--card); box-shadow: none; }
-.pin input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(13, 110, 97, 0.14); transform: none; }
+.pin input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--c29-r) var(--c29-g) var(--c29-b) / 0.14); transform: none; }
 .login__submit { height: 48px; font-size: 15px; }
 .login__as { display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 13.5px; color: var(--ink-mute); }
 
@@ -233,9 +233,9 @@ html:has(.login), body:has(.login) { overflow: hidden; }
 .faces { display: flex; align-items: center; }
 .faces > * { margin-left: -10px; box-shadow: 0 0 0 2px var(--card); }
 .hcard--pine .faces > * { box-shadow: 0 0 0 2px var(--pine); }
-.hcard--pine .faces .glyph { --t-bg: #DFF0EC; --t-fg: #0D6E61; }
+.hcard--pine .faces .glyph { --t-bg: rgb(var(--c43-r) var(--c43-g) var(--c43-b)); --t-fg: rgb(var(--c29-r) var(--c29-g) var(--c29-b)); }
 .faces > :first-child { margin-left: 0; }
-.faces__more { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: var(--brand); background: #DFF0EC; font-size: 12px; font-weight: 600; }
+.faces__more { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: var(--brand); background: rgb(var(--c43-r) var(--c43-g) var(--c43-b)); font-size: 12px; font-weight: 600; }
 
 /* wide screens: the E-Directory card becomes one row, icon and name, faces, arrow */
 @media (min-width: 1101px) {

@@ -17,11 +17,11 @@
   --line: rgba(20, 32, 31, 0.1);
   --line-mid: rgba(20, 32, 31, 0.2);
 
-  --pine: #0F2E2B;
-  --pine-2: #17403C;
-  --brand: #0D6E61;
-  --brand-deep: #0A5249;
-  --brand-wash: rgba(13, 110, 97, 0.08);
+  --pine: rgb(var(--c12-r) var(--c12-g) var(--c12-b));
+  --pine-2: rgb(var(--c18-r) var(--c18-g) var(--c18-b));
+  --brand: rgb(var(--c29-r) var(--c29-g) var(--c29-b));
+  --brand-deep: rgb(var(--c21-r) var(--c21-g) var(--c21-b));
+  --brand-wash: rgb(var(--c29-r) var(--c29-g) var(--c29-b) / 0.08);
   --accent: var(--brand);
 
   --amber: #E39A16;
@@ -73,5 +73,5 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: rgba(13, 110, 97, 0.18); color: var(--ink); }
+::selection { background: rgb(var(--c29-r) var(--c29-g) var(--c29-b) / 0.18); color: var(--ink); }
 h1, h2, h3 { font-family: var(--font-display); }
