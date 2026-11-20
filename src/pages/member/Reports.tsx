@@ -6,10 +6,12 @@ import { totalOf } from '../../lib/dues'
 import { inr } from '../../lib/format'
 import { paidInChapter } from '../../lib/payments'
 import { useDB } from '../../lib/store'
+import { moduleForPath, useModuleOn } from '../../lib/tenant'
 
 export default function Reports() {
   const { member, chapter } = useAuth()
   const db = useDB()
+  const moduleOn = useModuleOn()
   if (!member || !chapter) return null
 
   const chapterPaid = paidInChapter(db, chapter.id)
@@ -76,7 +78,7 @@ export default function Reports() {
       />
 
       <div className="ptiles">
-        {tiles.map((t) => (
+        {tiles.filter((t) => moduleOn(moduleForPath(t.to))).map((t) => (
           <Link key={t.to} to={t.to} className="ptile">
             <Glyph icon={t.icon} tone={t.tone} size={62} />
             <span className="ptile__body">

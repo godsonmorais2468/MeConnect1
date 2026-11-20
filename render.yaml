@@ -7,6 +7,13 @@ services:
     runtime: static
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
+    # Set these in the Render dashboard (they are build-time values). Leave VITE_API_URL empty to keep the sample-data prototype.
+    # Or leave them empty and edit public/config.js instead: it is read at run time, so no rebuild is needed to change the API address.
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_TENANT_HOST
+        sync: false
     routes:
       - type: rewrite
         source: /*
@@ -20,6 +27,10 @@ services:
         name: Cache-Control
         value: no-cache
       - path: /manifest.webmanifest
+        name: Cache-Control
+        value: no-cache
+      # config.js holds the API address and is read at run time
+      - path: /config.js
         name: Cache-Control
         value: no-cache
       # built files have a hash in their name and never change

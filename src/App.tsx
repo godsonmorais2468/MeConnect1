@@ -1,12 +1,14 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { LazyMotion, MotionConfig } from 'motion/react'
 import type { ReactNode } from 'react'
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import Aurora from './components/Aurora'
 import { getTier } from './lib/perf'
 import ConfirmProvider from './components/ConfirmProvider'
 import ToastProvider from './components/ToastProvider'
 import Shell from './components/Shell'
+import TenantGate from './components/TenantGate'
+import { moduleForPath, moduleIsOn, useModuleOn } from './lib/tenant'
 import { HOME } from './data/nav'
 import { SUBSCRIPTION_REQUIRED_EVENT } from './lib/api'
 import { useAuth } from './lib/auth'
@@ -75,8 +77,17 @@ function RequireEntitlement({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true
     async function check() {
+      /* a live client that was not given the Subscription module has no subscription to check */
+      if (!moduleIsOn('SUBSCRIPTION')) {
+        setAllowed(true)
+        return
+      }
       const res = await fetchSubscriptionStatus()
       if (!active) return
+      if (res.status === 403 && res.code === 'module_disabled') {
+        setAllowed(true)
+        return
+      }
       if (res.status === 401) {
         signOut()
         navigate('/login', { replace: true })
@@ -130,6 +141,14 @@ function OnlyVisitorHost({ children }: { children: ReactNode }) {
   return children
 }
 
+function RequireModule() {
+  const { pathname } = useLocation()
+  const moduleOn = useModuleOn()
+  const code = moduleForPath(pathname)
+  if (code && !moduleOn(code)) return <Navigate to="/" replace />
+  return <Outlet />
+}
+
 function RoleHome() {
   const { role } = useAuth()
   if (role && role !== 'member') return <Navigate to={HOME[role]} replace />
@@ -143,6 +162,7 @@ export default function App() {
     <Aurora />
     <ToastProvider>
       <ConfirmProvider>
+      <TenantGate>
       <Suspense fallback={null}>
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -173,6 +193,7 @@ export default function App() {
           <Route index element={<RoleHome />} />
           <Route path="help" element={<HelpDesk />} />
 
+          <Route element={<RequireModule />}>
           <Route path="directory" element={<Only role="member"><Directory /></Only>} />
           <Route path="directory/:id" element={<Only role="member"><MemberView /></Only>} />
           <Route path="attendance" element={<Only role="member"><Attendance /></Only>} />
@@ -206,10 +227,12 @@ export default function App() {
           <Route path="reports/ledger" element={<OnlyHeadTable><LedgerReport /></OnlyHeadTable>} />
           <Route path="reports/attendance" element={<OnlyHeadTable><AttendanceReport /></OnlyHeadTable>} />
           <Route path="reports/app-usage" element={<OnlyHeadTable><AppUsageReport /></OnlyHeadTable>} />
+          </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </Suspense>
+      </TenantGate>
       </ConfirmProvider>
     </ToastProvider>
     </MotionConfig>

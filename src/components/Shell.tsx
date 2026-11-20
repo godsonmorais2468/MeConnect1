@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } f
 import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom'
 import { ArrowLeftRight, Headset, KeyRound, LogOut, UserRound } from 'lucide-react'
 import { HOME, NAV } from '../data/nav'
+import { useModuleOn } from '../lib/tenant'
 import { useAuth } from '../lib/auth'
 import { isHeadTable } from '../lib/designations'
 import { useDismiss } from '../lib/hooks'
@@ -36,6 +37,8 @@ export default function Shell() {
   const menuRef = useRef<HTMLDivElement>(null)
   const close = useCallback(() => setOpen(false), [])
   useDismiss(menuRef, open, close)
+
+  const moduleOn = useModuleOn()
 
   /* Fresh data while the app is open, and again whenever another page is opened. */
   useAutoRefresh(!!auth.role)
@@ -82,7 +85,7 @@ export default function Shell() {
 
   if (!auth.role) return null
   const { member } = auth
-  const nav = NAV[auth.role].filter((item) => !item.headTable || isHeadTable(db, member))
+  const nav = NAV[auth.role].filter((item) => (!item.headTable || isHeadTable(db, member)) && moduleOn(item.module))
   const pct = member ? percent(member) : 0
   const dueCount = member ? db.invoices.filter((i) => i.memberId === member.id && i.status === 'due').length : 0
   const sub = auth.chapter ? `${auth.chapter.name} · ${auth.region?.name ?? ''}` : (auth.region?.name ?? '')

@@ -45,6 +45,18 @@ async function cacheFirst(request) {
   return response
 }
 
+/* config.js says where the API is: always ask the network first, so an edit on the server shows at once; the saved copy
+   is only for when there is no network (without it an offline start would fall back to the sample-data prototype). */
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request, { cache: 'no-store' })
+    if (keepable(response)) (await caches.open(CACHE)).put(request, response.clone())
+    return response
+  } catch {
+    return (await caches.match(request)) || new Response('', { status: 503 })
+  }
+}
+
 /* Everything else (icons, fonts): show what is saved and refresh it in the background. */
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(CACHE)
@@ -70,6 +82,7 @@ self.addEventListener('fetch', (event) => {
   if (own && url.pathname.startsWith('/push/')) return
 
   if (request.mode === 'navigate') return event.respondWith(page(request))
+  if (own && url.pathname === '/config.js') return event.respondWith(networkFirst(request))
   if (own && url.pathname.startsWith('/assets/')) return event.respondWith(cacheFirst(request))
   event.respondWith(staleWhileRevalidate(request))
 })

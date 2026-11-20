@@ -323,3 +323,24 @@ html:has(.login), body:has(.login) { overflow: hidden; }
   .login__form { gap: 12px; }
   .pin input { height: 46px; }
 }
+
+/* ---------- client gate: shown while the client is looked up, or when the address cannot be used ---------- */
+.tenant-gate {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  color: var(--ink, #14201f);
+}
+.tenant-gate h1 {
+  font-size: 22px;
+  margin: 4px 0 0;
+}
+.tenant-gate p {
+  max-width: 34ch;
+  margin: 0;
+  opacity: 0.75;
+}

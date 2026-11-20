@@ -4,10 +4,12 @@ import { CalendarClock, ChevronRight, CreditCard, FileText, Landmark, Layers } f
 import { Glyph, PageHead } from '../../components/ui'
 import { useAuth } from '../../lib/auth'
 import { useDB } from '../../lib/store'
+import { moduleForPath, useModuleOn } from '../../lib/tenant'
 
 export default function Accounts() {
   const { member, chapter } = useAuth()
   const db = useDB()
+  const moduleOn = useModuleOn()
   if (!member || !chapter) return null
 
   const modes = (db.paymentModes || []).filter((m) => m.chapterId === chapter.id)
@@ -71,7 +73,7 @@ export default function Accounts() {
       />
 
       <div className="ptiles">
-        {tiles.map((t) => (
+        {tiles.filter((t) => moduleOn(moduleForPath(`/accounts/${t.to}`))).map((t) => (
           <Link key={t.to} to={`/accounts/${t.to}`} className="ptile">
             <Glyph icon={t.icon} tone={t.tone} size={62} />
             <span className="ptile__body">

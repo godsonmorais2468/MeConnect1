@@ -9,13 +9,15 @@ import { SUPER_ADMIN, buildSeed } from '../data/seed'
 import { codeValid, distanceM, phaseOf, windowOf } from './attendance'
 import { dayOf, remainingOnRequest } from './dues'
 import { fmtTime } from './format'
-import { apiRequest, setTokens, clearTokens } from './api'
+import { apiRequest, getTokens, isRealApi, NS, setTokens, clearTokens } from './api'
+import { moduleIsOn, whenTenantReady } from './tenant'
 import { unlinkUser } from './oneSignal'
 import { BILLING_CYCLES, PLAN_SCOPES } from './types'
 import type { AccountHead, AppUsageData, AttendanceMethod, BankMaster, DB, DueListData, DueListMode, FinancialYear, HeadType, Invoice, Meeting, ModeOfPay, PayMethod, PaymentRequest, Plan, Poll, Profile, Recurrence, Membership, Session, Substitute, Visitor, Vote, Voucher, VoucherKind } from './types'
 
-const DB_KEY = 'me-connect:db:v17'
-const SESSION_KEY = 'me-connect:session'
+/* NS keeps a live (member API) install apart from the prototype's sample data in the same browser */
+const DB_KEY = `me-connect:db:v17${NS}`
+const SESSION_KEY = `me-connect:session${NS}`
 
 export interface ActionResult {
   error?: string
@@ -72,7 +74,7 @@ let db: DB = loadDB()
 let session: Session | null = loadSession()
 
 /* The chapters the signed-in person belongs to, kept where the sign in is kept (this device, or this tab only). */
-const MEMBERSHIPS_KEY = 'me-connect:memberships'
+const MEMBERSHIPS_KEY = `me-connect:memberships${NS}`
 
 function loadMemberships(): Membership[] {
   for (const store of ['localStorage', 'sessionStorage'] as const) {
@@ -91,7 +93,7 @@ let memberships: Membership[] = loadMemberships()
 /** Whether this sign in is remembered on the device (tokens in localStorage) rather than kept for this tab only. */
 const rememberedLogin = () => {
   try {
-    return window.localStorage.getItem('me-connect:tokens') !== null
+    return window.localStorage.getItem(`me-connect:tokens${NS}`) !== null
   } catch {
     return false
   }
@@ -102,6 +104,11 @@ const listeners = new Set<() => void>()
 let edits = 0
 let lastSyncAt = 0
 let syncing: Promise<void> | null = null
+
+/** A list read that is skipped (answers "not available") when its module is off for this client, so the server is not asked for it. */
+function gatedRequest<T>(module: string, endpoint: string) {
+  return moduleIsOn(module) ? apiRequest<T>(endpoint) : Promise.resolve({ status: 403, error: 'module off' } as { data?: T; error?: string; code?: string; status: number })
+}
 
 /** Reads everything from the backend. Calls made while a read is running share it instead of piling up. */
 export function syncWithBackend(): Promise<void> {
@@ -116,27 +123,31 @@ export function refreshIfStale(maxAgeMs = 15_000) {
 
 async function runSync(attempt = 0): Promise<void> {
   const mark = edits
+  /* Live mode: with no one signed in there is nothing to read, and the login screen should not fire a request per list. */
+  if (isRealApi && !getTokens()) return
+  /* ...and the client must be known first, so lists of modules that are off are not asked for. */
+  if (isRealApi && !(await whenTenantReady())) return
   try {
     const [regionsRes, plansRes, chaptersRes, meetingsRes, pollsRes, membersRes, invoicesRes, attendanceRes, designationsRes, accountHeadsRes, paymentModesRes, financialYearsRes, bankAccountsRes, vouchersRes, visitorPaymentsRes, paymentRequestsRes, membershipsRes, substituteRegsRes, visitorRegsRes] = await Promise.all([
       apiRequest<any[]>('/regions/'),
-      apiRequest<any[]>('/masters/plans/'),
+      gatedRequest<any[]>('SUBSCRIPTION', '/masters/plans/'),
       apiRequest<any[]>('/chapters/'),
-      apiRequest<any[]>('/chapters/meetings/'),
-      apiRequest<any[]>('/chapters/polls/'),
+      gatedRequest<any[]>('MEETINGS', '/chapters/meetings/'),
+      gatedRequest<any[]>('POLLS', '/chapters/polls/'),
       apiRequest<any[]>('/members/'),
-      apiRequest<any[]>('/members/invoices/'),
-      apiRequest<any[]>('/members/attendance/'),
+      gatedRequest<any[]>('DUES', '/members/invoices/'),
+      gatedRequest<any[]>('ATTENDANCE', '/members/attendance/'),
       apiRequest<any[]>('/masters/designations/'),
-      apiRequest<any[]>('/masters/account-heads/'),
-      apiRequest<any[]>('/masters/payment-modes/'),
-      apiRequest<any[]>('/masters/financial-years/'),
-      apiRequest<any[]>('/masters/bank-accounts/'),
-      apiRequest<any[]>('/masters/vouchers/'),
-      apiRequest<any[]>('/members/visitor-payments/'),
-      apiRequest<any[]>('/members/payment-requests/'),
+      gatedRequest<any[]>('ACCOUNTS', '/masters/account-heads/'),
+      gatedRequest<any[]>('ACCOUNTS', '/masters/payment-modes/'),
+      gatedRequest<any[]>('ACCOUNTS', '/masters/financial-years/'),
+      gatedRequest<any[]>('ACCOUNTS', '/masters/bank-accounts/'),
+      gatedRequest<any[]>('VOUCHERS', '/masters/vouchers/'),
+      gatedRequest<any[]>('VISITORS', '/members/visitor-payments/'),
+      gatedRequest<any[]>('PAYMENTS', '/members/payment-requests/'),
       apiRequest<any>('/auth/memberships/'),
-      apiRequest<any[]>('/members/substitute-registrations/'),
-      apiRequest<any[]>('/members/visitor-registrations/'),
+      gatedRequest<any[]>('VISITORS', '/members/substitute-registrations/'),
+      gatedRequest<any[]>('VISITORS', '/members/visitor-registrations/'),
     ])
 
     let updated = false
@@ -1324,6 +1335,8 @@ export async function setChapterUpi(chapterId: string, upiId: string, upiName: s
 
 /** The chapter's Due List (every member may read it while the head table has it on). Null when it cannot be read. */
 export async function fetchDueList(): Promise<DueListData | null> {
+  /* a client without the Due List module is not asked for it */
+  if (!moduleIsOn('DUE_LIST')) return null
   const res = await apiRequest<any>('/members/due-list/')
   if (res.error || !res.data) return null
   const d = res.data

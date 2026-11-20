@@ -15,16 +15,18 @@ export interface NavItem {
   badge?: 'dues'
   /** Shown only to members whose designation is ticked "Head Table". */
   headTable?: boolean
+  /** The Superadmin module code that must be on for this client; absent = always shown (the core). */
+  module?: string
 }
 
 export const NAV: Record<Role, NavItem[]> = {
   member: [
     { to: '/', label: 'Home', icon: House, tone: 'gold', end: true },
-    { to: '/directory', label: 'E-Directory', icon: BookUser, tone: 'red' },
-    { to: '/attendance', label: 'Attendance', icon: CalendarCheck, tone: 'green' },
-    { to: '/office-bearers', label: 'Office Bearers', short: 'Bearers', icon: Award, tone: 'wine' },
-    { to: '/wishes', label: 'Wishes', icon: PartyPopper, tone: 'navy' },
-    { to: '/dues', label: 'Dues', icon: IndianRupee, tone: 'gold', badge: 'dues' },
+    { to: '/directory', label: 'E-Directory', icon: BookUser, tone: 'red', module: 'DIRECTORY' },
+    { to: '/attendance', label: 'Attendance', icon: CalendarCheck, tone: 'green', module: 'ATTENDANCE' },
+    { to: '/office-bearers', label: 'Office Bearers', short: 'Bearers', icon: Award, tone: 'wine', module: 'OFFICE_BEARERS' },
+    { to: '/wishes', label: 'Wishes', icon: PartyPopper, tone: 'navy', module: 'WISHES' },
+    { to: '/dues', label: 'Dues', icon: IndianRupee, tone: 'gold', badge: 'dues', module: 'DUES' },
   ],
 }
 

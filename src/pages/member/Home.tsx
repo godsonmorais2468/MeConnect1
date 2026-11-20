@@ -13,6 +13,7 @@ import { fmtDate, fmtTime, firstName, inr } from '../../lib/format'
 import { CoordinatorQr, MeetingBrief } from './Attendance'
 import { useNow } from '../../lib/hooks'
 import { fetchDueList, syncWithBackend, useDB } from '../../lib/store'
+import { useModuleOn } from '../../lib/tenant'
 import type { Attendance, Meeting, Member, Tone } from '../../lib/types'
 import { wishesFor } from '../../lib/wishes'
 import { BEARER_GROUPS } from '../../data/bearers'
@@ -37,6 +38,7 @@ function attendanceStatus(meeting: Meeting | undefined, mark: Attendance | undef
 export default function Home() {
   const { member, chapter, region } = useAuth()
   const db = useDB()
+  const moduleOn = useModuleOn()
   /* with the Due List switched on, it sits beside the E-Directory on phones */
   const dueListOn = Boolean(chapter && db.chapters.find((c) => c.id === chapter.id)?.dueListEnabled)
   const now = useNow(30_000)
@@ -176,14 +178,14 @@ export default function Home() {
             {/* order: Accounts, Team, Meetings, Polls, Payments, Visitor, Reports, Settings */}
             {canControl && (
               <>
-                <ControlCard i={0} to="/accounts" icon={Landmark} tone="steel" title="Accounts" sub="Masters" onPick={() => setCtrlOpen(false)} />
-                <ControlCard i={1} to="/team" icon={Users} tone="green" title="Team" sub="Chapter" onPick={() => setCtrlOpen(false)} />
-                <ControlCard i={2} to="/meetings" icon={CalendarClock} tone="gold" title="Meetings" sub="Schedules" onPick={() => setCtrlOpen(false)} />
-                <ControlCard i={3} to="/manage-rsvp" icon={ListChecks} tone="green" title="Polls" sub="Responses" onPick={() => setCtrlOpen(false)} />
-                <ControlCard i={4} to="/payments" icon={HandCoins} tone="navy" title="Payments" sub="Collect" onPick={() => setCtrlOpen(false)} />
+                {moduleOn('ACCOUNTS') && <ControlCard i={0} to="/accounts" icon={Landmark} tone="steel" title="Accounts" sub="Masters" onPick={() => setCtrlOpen(false)} />}
+                {moduleOn('CHAPTER_TEAM') && <ControlCard i={1} to="/team" icon={Users} tone="green" title="Team" sub="Chapter" onPick={() => setCtrlOpen(false)} />}
+                {moduleOn('MEETINGS') && <ControlCard i={2} to="/meetings" icon={CalendarClock} tone="gold" title="Meetings" sub="Schedules" onPick={() => setCtrlOpen(false)} />}
+                {moduleOn('POLLS') && <ControlCard i={3} to="/manage-rsvp" icon={ListChecks} tone="green" title="Polls" sub="Responses" onPick={() => setCtrlOpen(false)} />}
+                {moduleOn('PAYMENTS') && <ControlCard i={4} to="/payments" icon={HandCoins} tone="navy" title="Payments" sub="Collect" onPick={() => setCtrlOpen(false)} />}
               </>
             )}
-            {canVisitor && <ControlCard i={5} to="/visitor" icon={UserCheck} tone="red" title="Visitor" sub="Host QR" onPick={() => setCtrlOpen(false)} />}
+            {canVisitor && moduleOn('VISITORS') && <ControlCard i={5} to="/visitor" icon={UserCheck} tone="red" title="Visitor" sub="Host QR" onPick={() => setCtrlOpen(false)} />}
             {canControl && (
               <>
                 <ControlCard i={6} to="/reports" icon={FileChartColumn} tone="gold" title="Reports" sub="Analytics" onPick={() => setCtrlOpen(false)} />
@@ -198,7 +200,7 @@ export default function Home() {
 
       <div className="home">
         <div className="hlist">
-          {dueListOn && (
+          {dueListOn && moduleOn('DUE_LIST') && (
             <Link to="/due-list" className="hrow hrow--flag">
               <Glyph icon={ClipboardList} tone="gold" size={44} />
               <div className="hrow__txt">
@@ -210,6 +212,7 @@ export default function Home() {
             </Link>
           )}
 
+          {moduleOn('ATTENDANCE') && (
           <Link to="/attendance" className="hrow">
             <Glyph icon={CalendarCheck} tone="green" size={44} />
             <div className="hrow__txt">
@@ -219,7 +222,9 @@ export default function Home() {
             <span className={`stat stat--${att.tone}`}>{att.label}</span>
             <ArrowRight size={18} className="hrow__go" />
           </Link>
+          )}
 
+          {moduleOn('DUES') && (
           <Link to="/dues" className="hrow">
             <Glyph icon={IndianRupee} tone="gold" size={44} />
             <div className="hrow__txt">
@@ -229,7 +234,9 @@ export default function Home() {
             <span className={`stat ${pending.length ? 'stat--bad' : 'stat--ok'}`}>{pending.length ? `${pending.length} pending` : 'All paid'}</span>
             <ArrowRight size={18} className="hrow__go" />
           </Link>
+          )}
 
+          {moduleOn('POLLS') && (
           <Link to="/rsvp" className="hrow">
             <Glyph icon={ListChecks} tone="green" size={44} />
             <div className="hrow__txt">
@@ -239,7 +246,9 @@ export default function Home() {
             <span className={`stat ${waiting.length ? 'stat--bad' : 'stat--ok'}`}>{waiting.length ? `${waiting.length} to answer` : 'All answered'}</span>
             <ArrowRight size={18} className="hrow__go" />
           </Link>
+          )}
 
+          {moduleOn('WISHES') && (
           <Link to="/wishes" className="hrow">
             <Glyph icon={PartyPopper} tone="navy" size={44} />
             <div className="hrow__txt">
@@ -248,9 +257,11 @@ export default function Home() {
             </div>
             <ArrowRight size={18} className="hrow__go" />
           </Link>
+          )}
         </div>
 
         <div className="hside">
+          {moduleOn('DIRECTORY') && (
           <MotionLink to="/directory" className="hcard hcard--pine hcard--dir" onHoverStart={replayFan} whileHover={{ y: -4 }} whileTap={{ scale: 0.985 }} transition={SPRING}>
             <div className="hcard__top">
               <Glyph icon={BookUser} tone="red" size={44} />
@@ -264,7 +275,9 @@ export default function Home() {
             </div>
             <Fan key={deal} people={mates} replay={deal > 0} />
           </MotionLink>
+          )}
 
+          {moduleOn('OFFICE_BEARERS') && (
           <MotionLink to="/office-bearers" className="hcard hcard--bear" onHoverStart={replayPodium} whileHover={{ y: -4 }} whileTap={{ scale: 0.985 }} transition={SPRING}>
             <div className="hcard__top">
               <Glyph icon={Award} tone="gold" size={44} />
@@ -276,6 +289,7 @@ export default function Home() {
             </div>
             <Podium key={rise} people={ranked} />
           </MotionLink>
+          )}
         </div>
       </div>
 

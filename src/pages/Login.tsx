@@ -11,7 +11,8 @@ import { useAuth } from '../lib/auth'
 import type { AuthInfo } from '../lib/auth'
 import { useFitToScreen } from '../lib/fit'
 import { applyPinInput } from '../lib/pin'
-import { chooseChapter, signIn, signOut } from '../lib/store'
+import { isRealApi } from '../lib/api'
+import { chooseChapter, isMobile, isPin, signIn, signOut } from '../lib/store'
 import type { Membership } from '../lib/types'
 import { useToast } from '../lib/toast'
 
@@ -66,11 +67,10 @@ export default function Login() {
     setTyped('')
   }
 
-  /* the prototype needs no credentials: whatever is typed, or nothing, opens the app */
-  async function open(as: string) {
+  async function open(mobile: string, pinValue: string) {
     if (signingIn) return
     setSigningIn(true)
-    const res = await signIn(as, '', remember)
+    const res = await signIn(mobile, pinValue, remember)
     /* on success the page is replaced by the dashboard, so "Processing…" stays until then; any other outcome frees the button */
     if (res.error || res.setPin || res.choose) setSigningIn(false)
     if (res.setPin) {
@@ -91,7 +91,26 @@ export default function Login() {
 
   function submit(e: FormEvent) {
     e.preventDefault()
-    void open('member')
+    /* the prototype (no server) needs no credentials: whatever is typed, or nothing, opens the app */
+    if (!isRealApi) {
+      void open('member', '')
+      return
+    }
+    if (typed !== code) {
+      toast(typed ? 'The digits do not match. Try the new code.' : 'Enter the 4 digits shown.', 'info')
+      refreshCaptcha()
+      return
+    }
+    if (!isMobile(phone)) {
+      toast('Enter your 10-digit mobile number.', 'info')
+      return
+    }
+    const pinStr = pin.join('')
+    if (!isPin(pinStr)) {
+      toast('Enter your 4-digit PIN.', 'info')
+      return
+    }
+    void open(phone, pinStr)
   }
 
   async function pickChapter(memberId: string) {
